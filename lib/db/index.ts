@@ -7,12 +7,7 @@ const dbPath = "bank.db";
 const sqlite = new Database(dbPath);
 export const db = drizzle(sqlite, { schema });
 
-const connections: Database.Database[] = [];
-
 export function initDb() {
-  const conn = new Database(dbPath);
-  connections.push(conn);
-
   // Create tables if they don't exist
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS users (
@@ -61,6 +56,22 @@ export function initDb() {
     );
   `);
 }
+
+//shutdown
+export function closeDb() {
+  sqlite.close();
+}
+
+// Handle process termination
+process.on('SIGINT', () => {
+  closeDb();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  closeDb();
+  process.exit(0);
+});
 
 // Initialize database on import
 initDb();

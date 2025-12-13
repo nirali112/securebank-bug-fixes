@@ -3,12 +3,15 @@ import { TRPCError } from "@trpc/server";
 import { protectedProcedure, router } from "../trpc";
 import { db } from "@/lib/db";
 import { accounts, transactions } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
+import crypto from 'crypto';
+
 
 function generateAccountNumber(): string {
-  return Math.floor(Math.random() * 1000000000)
-    .toString()
-    .padStart(10, "0");
+  // Use cryptographically secure random number generator
+  const randomBytes = crypto.randomBytes(5);
+  const randomNumber = parseInt(randomBytes.toString('hex'), 16);
+  return randomNumber.toString().padStart(10, "0").slice(0, 10);
 }
 
 export const accountRouter = router({
@@ -54,18 +57,15 @@ export const accountRouter = router({
       // Fetch the created account
       const account = await db.select().from(accounts).where(eq(accounts.accountNumber, accountNumber!)).get();
 
-      return (
-        account || {
-          id: 0,
-          userId: ctx.user.id,
-          accountNumber: accountNumber!,
-          accountType: input.accountType,
-          balance: 100,
-          status: "pending",
-          createdAt: new Date().toISOString(),
-        }
-      );
-    }),
+      if (!account) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create account",
+        });
+      }
+
+      return account;
+     }),
 
   getAccounts: protectedProcedure.query(async ({ ctx }) => {
     const userAccounts = await db.select().from(accounts).where(eq(accounts.userId, ctx.user.id));
@@ -120,63 +120,58 @@ export const accountRouter = router({
       });
 
       // Fetch the created transaction
-      const transaction = await db.select().from(transactions).orderBy(transactions.createdAt).limit(1).get();
+      const transaction = await db
+        .select()
+        .from(transactions)
+        .where(eq(transactions.accountId, input.accountId))
+        .orderBy(desc(transactions.id))
+        .limit(1)
+        .get();
 
       // Update account balance
+      const newBalance = account.balance + amount;
+
       await db
         .update(accounts)
         .set({
-          balance: account.balance + amount,
+          balance: newBalance,
         })
         .where(eq(accounts.id, input.accountId));
-
-      let finalBalance = account.balance;
-      for (let i = 0; i < 100; i++) {
-        finalBalance = finalBalance + amount / 100;
-      }
-
       return {
-        transaction,
-        newBalance: finalBalance, // This will be slightly off due to float precision
-      };
+        transaction, newBalance: newBalance }
     }),
-
   getTransactions: protectedProcedure
-    .input(
-      z.object({
-        accountId: z.number(),
-      })
-    )
-    .query(async ({ input, ctx }) => {
-      // Verify account belongs to user
-      const account = await db
-        .select()
-        .from(accounts)
-        .where(and(eq(accounts.id, input.accountId), eq(accounts.userId, ctx.user.id)))
-        .get();
+  .input(
+    z.object({
+      accountId: z.number(),
+    })
+  )
+  .query(async ({ input, ctx }) => {
+    // Verify account belongs to user
+    const account = await db
+      .select()
+      .from(accounts)
+      .where(and(eq(accounts.id, input.accountId), eq(accounts.userId, ctx.user.id)))
+      .get();
 
-      if (!account) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Account not found",
-        });
-      }
+    if (!account) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Account not found",
+      });
+    }
 
-      const accountTransactions = await db
-        .select()
-        .from(transactions)
-        .where(eq(transactions.accountId, input.accountId));
+    const accountTransactions = await db
+      .select()
+      .from(transactions)
+      .where(eq(transactions.accountId, input.accountId))
+      .orderBy(desc(transactions.createdAt)); // Newest first
 
-      const enrichedTransactions = [];
-      for (const transaction of accountTransactions) {
-        const accountDetails = await db.select().from(accounts).where(eq(accounts.id, transaction.accountId)).get();
+    const enrichedTransactions = accountTransactions.map(transaction => ({
+      ...transaction,
+      accountType: account?.accountType,
+    }));
 
-        enrichedTransactions.push({
-          ...transaction,
-          accountType: accountDetails?.accountType,
-        });
-      }
-
-      return enrichedTransactions;
-    }),
+    return enrichedTransactions;
+  })
 });

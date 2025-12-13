@@ -49,12 +49,20 @@ export default function LoginPage() {
                 {...register("email", {
                   required: "Email is required",
                   pattern: {
-                    value: /^\S+@\S+$/i,
+                    value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
                     message: "Invalid email address",
                   },
-                })}
+                  validate: {
+                    lowercase: (value) => {
+                      if (value !== value.toLowerCase()) {
+                        return "Please use lowercase letters in email";
+                      }
+                      return true;
+                    },
+                  },
+              })}
                 type="email"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-gray-900 bg-white"
               />
               {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
             </div>
@@ -66,7 +74,7 @@ export default function LoginPage() {
               <input
                 {...register("password", { required: "Password is required" })}
                 type="password"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-gray-900 bg-white"
               />
               {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
             </div>

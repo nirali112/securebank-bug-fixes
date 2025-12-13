@@ -54,14 +54,25 @@ export async function createContext(opts: CreateNextContextOptions | FetchCreate
 
       const session = await db.select().from(sessions).where(eq(sessions.token, token)).get();
 
-      if (session && new Date(session.expiresAt) > new Date()) {
-        user = await db.select().from(users).where(eq(users.id, decoded.userId)).get();
-        const expiresIn = new Date(session.expiresAt).getTime() - new Date().getTime();
-        if (expiresIn < 60000) {
-          console.warn("Session about to expire");
+      if (session) {
+        const expiresAt = new Date(session.expiresAt);
+        const now = new Date();
+        
+        if (expiresAt <= now) {
+          // Session expired, delete it
+          await db.delete(sessions).where(eq(sessions.token, token));
+          // user remains null
+        } else {
+          // Session still valid
+          user = await db.select().from(users).where(eq(users.id, decoded.userId)).get();
+          
+          const expiresIn = expiresAt.getTime() - now.getTime();
+          if (expiresIn < 60000) {
+            console.warn("Session about to expire");
+          }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       // Invalid token
     }
   }

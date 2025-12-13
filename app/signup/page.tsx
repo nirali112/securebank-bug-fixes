@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { trpc } from "@/lib/trpc/client";
 import Link from "next/link";
+import { US_STATES } from "@/utils/constants";
 
 type SignupFormData = {
   email: string;
@@ -83,12 +84,30 @@ export default function SignupPage() {
                   {...register("email", {
                     required: "Email is required",
                     pattern: {
-                      value: /^\S+@\S+$/i,
-                      message: "Invalid email address",
+                      value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+                      message: "Invalid email address.",
                     },
+                    validate: {
+                        noUppercase: (value) => {
+                          if (value !== value.toLowerCase()) {
+                            return "Email will be stored in lowercase. Please use lowercase letters.";
+                          }
+                          return true;
+                        },
+                        commonTypos: (value) => {
+                          const commonTypos = ['.con', '.cmo', '.cm', '.co.', '.om', '.ner', '.ogr'];
+                          const lowerValue = value.toLowerCase();
+                          for (const typo of commonTypos) {
+                            if (lowerValue.endsWith(typo)) {
+                              return `Did you mean .com? Check for typos in domain extension.`;
+                            }
+                          }
+                          return true;
+                        },
+                    }
                   })}
                   type="email"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-gray-900 bg-white"
                 />
                 {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>}
               </div>
@@ -110,10 +129,13 @@ export default function SignupPage() {
                         return !commonPasswords.includes(value.toLowerCase()) || "Password is too common";
                       },
                       hasNumber: (value) => /\d/.test(value) || "Password must contain a number",
+                      hasUppercase: (value) => /[A-Z]/.test(value) || "Password must contain an uppercase letter",
+                      hasLowercase: (value) => /[a-z]/.test(value) || "Password must contain a lowercase letter",
+                      hasSpecialChar: (value) => /[!@#$%^&*(),.?":{}|<>]/.test(value) || "Password must contain a special character (!@#$%^&*...)",
                     },
                   })}
                   type="password"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-gray-900 bg-white"
                 />
                 {errors.password && <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>}
               </div>
@@ -128,7 +150,7 @@ export default function SignupPage() {
                     validate: (value) => value === password || "Passwords do not match",
                   })}
                   type="password"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-gray-900 bg-white"
                 />
                 {errors.confirmPassword && (
                   <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
@@ -147,7 +169,7 @@ export default function SignupPage() {
                   <input
                     {...register("firstName", { required: "First name is required" })}
                     type="text"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-gray-900 bg-white"
                   />
                   {errors.firstName && <p className="mt-1 text-sm text-red-600">{errors.firstName.message}</p>}
                 </div>
@@ -159,7 +181,7 @@ export default function SignupPage() {
                   <input
                     {...register("lastName", { required: "Last name is required" })}
                     type="text"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-gray-900 bg-white"
                   />
                   {errors.lastName && <p className="mt-1 text-sm text-red-600">{errors.lastName.message}</p>}
                 </div>
@@ -172,14 +194,37 @@ export default function SignupPage() {
                 <input
                   {...register("phoneNumber", {
                     required: "Phone number is required",
-                    pattern: {
-                      value: /^\d{10}$/,
-                      message: "Phone number must be 10 digits",
-                    },
+                      validate: {
+                          validFormat: (value) => {
+                          const cleaned = value.replace(/[\s\-\(\)]/g, '');
+                            
+                            if (/^\d{10}$/.test(cleaned)) {
+                              const areaCode = parseInt(cleaned.substring(0, 3));
+                              
+                              // Area code cannot start with 0 or 1
+                              if (areaCode < 200) {
+                                return "Invalid area code";
+                              }
+                              
+                              // Area code cannot be in 900-999 range
+                              if (areaCode >= 900) {
+                                return "Invalid area code";
+                              }
+                              
+                              return true;
+                            }
+                            // International format
+                            if (/^\+\d{1,3}\d{7,14}$/.test(cleaned)) {
+                              return true;
+                            }
+                            
+                            return "Enter a valid phone number";
+                          },
+                        },
                   })}
                   type="tel"
-                  placeholder="1234567890"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                  placeholder="2025551234 or +442071234567"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-gray-900 bg-white"
                 />
                 {errors.phoneNumber && <p className="mt-1 text-sm text-red-600">{errors.phoneNumber.message}</p>}
               </div>
@@ -189,9 +234,48 @@ export default function SignupPage() {
                   Date of Birth
                 </label>
                 <input
-                  {...register("dateOfBirth", { required: "Date of birth is required" })}
+                  {...register("dateOfBirth", { required: "Date of birth is required",
+                     validate: {
+                        notFuture: (value) => {
+                          const selectedDate = new Date(value);
+                          const today = new Date();
+                          if (selectedDate > today) {
+                            return "Date of birth cannot be in the future";
+                          }
+                          return true;
+                        },
+                        minimumAge: (value) => {
+                          const selectedDate = new Date(value);
+                          const today = new Date();
+                          const age = today.getFullYear() - selectedDate.getFullYear();
+                          const monthDiff = today.getMonth() - selectedDate.getMonth();
+                          const dayDiff = today.getDate() - selectedDate.getDate();
+                          
+                          // Calculate exact age
+                          let exactAge = age;
+                          if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) {
+                            exactAge--;
+                          }
+                          
+                          if (exactAge < 18) {
+                            return "You must be at least 18 years old to open an account";
+                          }
+                          return true;
+                        },
+                        reasonable: (value) => {
+                          const selectedDate = new Date(value);
+                          const today = new Date();
+                          const age = today.getFullYear() - selectedDate.getFullYear();
+                          
+                          if (age > 120) {
+                            return "Please enter a valid date of birth";
+                          }
+                          return true;
+                        },
+                      },
+                  })}
                   type="date"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-gray-900 bg-white"
                 />
                 {errors.dateOfBirth && <p className="mt-1 text-sm text-red-600">{errors.dateOfBirth.message}</p>}
               </div>
@@ -214,7 +298,7 @@ export default function SignupPage() {
                   })}
                   type="text"
                   placeholder="123456789"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-gray-900 bg-white"
                 />
                 {errors.ssn && <p className="mt-1 text-sm text-red-600">{errors.ssn.message}</p>}
               </div>
@@ -226,7 +310,7 @@ export default function SignupPage() {
                 <input
                   {...register("address", { required: "Address is required" })}
                   type="text"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-gray-900 bg-white"
                 />
                 {errors.address && <p className="mt-1 text-sm text-red-600">{errors.address.message}</p>}
               </div>
@@ -239,7 +323,7 @@ export default function SignupPage() {
                   <input
                     {...register("city", { required: "City is required" })}
                     type="text"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-gray-900 bg-white"
                   />
                   {errors.city && <p className="mt-1 text-sm text-red-600">{errors.city.message}</p>}
                 </div>
@@ -248,18 +332,19 @@ export default function SignupPage() {
                   <label htmlFor="state" className="block text-sm font-medium text-gray-700">
                     State
                   </label>
-                  <input
+                  <select
                     {...register("state", {
                       required: "State is required",
-                      pattern: {
-                        value: /^[A-Z]{2}$/,
-                        message: "Use 2-letter state code",
-                      },
                     })}
-                    type="text"
-                    placeholder="CA"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
-                  />
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-gray-900 bg-white"
+                  >
+                    <option value="">Select your state</option>
+                    {US_STATES.map((state) => (
+                      <option key={state.code} value={state.code}>
+                        {state.code}
+                      </option>
+                    ))}
+                  </select>
                   {errors.state && <p className="mt-1 text-sm text-red-600">{errors.state.message}</p>}
                 </div>
 
@@ -277,7 +362,7 @@ export default function SignupPage() {
                     })}
                     type="text"
                     placeholder="12345"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border text-gray-900 bg-white"
                   />
                   {errors.zipCode && <p className="mt-1 text-sm text-red-600">{errors.zipCode.message}</p>}
                 </div>

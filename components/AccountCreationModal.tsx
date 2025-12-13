@@ -43,7 +43,7 @@ export function AccountCreationModal({ onClose, onSuccess }: AccountCreationModa
                   onChange={(e) => setAccountType(e.target.value as "checking")}
                   className="mr-2"
                 />
-                <span>Checking Account</span>
+                <span className="text-gray-900">Checking Account</span>
               </label>
               <label className="flex items-center">
                 <input
@@ -53,7 +53,7 @@ export function AccountCreationModal({ onClose, onSuccess }: AccountCreationModa
                   onChange={(e) => setAccountType(e.target.value as "savings")}
                   className="mr-2"
                 />
-                <span>Savings Account</span>
+                <span className="text-gray-900">Savings Account</span>
               </label>
             </div>
           </div>
