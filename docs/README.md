@@ -59,7 +59,7 @@ npm run dev
 
 ## Documentation
 
-Detailed documentation is in this folder with 3 files for each section of bugs:
+Detailed documentation is in this folder for each section:
 
 1. **[UI & Validation Fixes](./01-UI-AND-VALIDATION-FIXES.md)** - 11 bugs
 2. **[Security Fixes](./02-SECURITY-FIXES.md)** - 4 bugs
@@ -169,6 +169,27 @@ for (const user of users) {
 
 ---
 
+---
+
+## Testing
+
+Added test cases for critical bugs (extra credit):
+
+```bash
+npm install --save-dev jest @jest/globals ts-jest @types/jest
+npm test
+```
+
+**15 test cases covering:**
+- Security: SSN encryption, secure random, XSS prevention
+- Validation: Age verification, Luhn algorithm, ABA routing
+- Logic: Transaction sorting, balance calculation, query optimization
+- Edge cases: Zero amounts, leading zeros, area code validation
+
+See [TESTING.md](../TESTING.md) for setup instructions.
+
+---
+
 ## Summary
 
 All 23 bugs have been fixed with proper solutions. The application now has:
@@ -178,5 +199,6 @@ All 23 bugs have been fixed with proper solutions. The application now has:
 - ✅ Optimized database queries
 - ✅ Proper error handling
 - ✅ Resource cleanup
+- ✅ Test coverage for critical fixes
 
 Thanks for reviewing!
